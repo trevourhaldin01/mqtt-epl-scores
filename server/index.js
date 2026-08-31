@@ -6,6 +6,9 @@ import { dirname, join } from 'path';
 import { v4 as uuidv4 } from 'uuid'
 import { matchRoutes } from './routes/matches.js';
 import { addSSEClient, setupSSE } from './sse.js';
+import { getAllMatches } from './models/matches.js';
+import { teamsController } from './controllers/teams.controller.js';
+
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -59,6 +62,9 @@ app.post('/api/matches',publishMatch);
 app.patch('/api/matches/:id/score', publishScoreUpdate);
 app.post('/api/matches/:id/events', publishEvent);
 app.get('/api/matches', getMatches);
+
+//teams
+app.get('/api/teams', teamsController.fetchAllTeams)
 
 app.listen(PORT, () => {
     console.log(`Football Scores Server running at http://localhost:${PORT}`);

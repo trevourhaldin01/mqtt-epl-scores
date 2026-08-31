@@ -1,5 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
+import { matchesRepo } from '../models/matches.js';
+import { eventsRepo } from '../models/events.js';
 
 const TOPIC_MATCH = 'sports/football/match';
 const TOPIC_SCORES = 'sports/football/scores';
@@ -7,22 +9,22 @@ const TOPIC_EVENTS = 'sports/football/events';
 
 const matches = new Map();
 
-function publish(client,topic, payload, qos =1){
+function publish(client, topic, payload, qos = 1) {
 
-    if(!client?.connected){
+    if (!client?.connected) {
         console.warn('MQTT not connected, message not published');
         return false;
     }
     client.publish(topic, JSON.stringify(payload), { qos, retain: false });
-    return false;    
+    return false;
 }
 
-export function matchRoutes(mqttClient){
+export function matchRoutes(mqttClient) {
     return {
-        publishMatch: (req, res) => {
-            const {homeTeam, awayTeam,league, venue, kickoff} = req.body;
-            if(!homeTeam || !awayTeam) {
-                return res.status(400).json({error:'homeTeam and awayTeam are required'});
+        publishMatch: async (req, res) => {
+            const { homeTeam, awayTeam, league, venue, kickoff } = req.body;
+            if (!homeTeam || !awayTeam) {
+                return res.status(400).json({ error: 'homeTeam and awayTeam are required' });
             }
 
             const match = {
@@ -33,40 +35,45 @@ export function matchRoutes(mqttClient){
                 awayScore: 0,
                 league: league || 'Premier League',
                 venue: venue || 'TBD',
-                kickoff: kickoff || new  Date().toISOString(),
+                kickoff: kickoff || new Date().toISOString(),
                 status: 'scheduled',
                 minute: 0,
                 events: [],
                 createdAt: new Date().toISOString()
             };
 
-            matches.set(match.id , match);
+            matches.set(match.id, match);
+            try {
+                const id = await matchesRepo.postMatch(match)
+                const topic = `\({TOPIC_MATCH}/\){match.id}`;
+                publish(mqttClient, topic, match);
+                publish(mqttClient, TOPIC_SCORES, { type: 'match_created', match });
 
-            const topic = `\({TOPIC_MATCH}/\){match.id}`;
-            publish(mqttClient,topic,match);
-            publish(mqttClient,TOPIC_SCORES,{type: 'match_created',match});
-            
-            res.status(201).json(match);
+                res.status(201).json(match);
+            } catch (error) {
+                console.log(error)
+                res.status(500).json({ error: "Database Error" })
+            }
         },
 
         publishScoreUpdate: (req, res) => {
-            const {id} = req.params;
-            const {homeScore, awayScore, minute, status} = req.body;
+            const { id } = req.params;
+            const { homeScore, awayScore, minute, status } = req.body;
 
             const match = matches.get(id);
-            if(!match){
-                return res.status(404).json({error:'Match not found'})
+            if (!match) {
+                return res.status(404).json({ error: 'Match not found' })
             }
 
-            if(homeScore !== undefined) match.homeScore = homeScore;
-            if(awayScore !== undefined) match.awayScore = awayScore;
-            if(minute !== undefined) match.minute = minute;
-            if(status !== undefined) match.status = status;
+            if (homeScore !== undefined) match.homeScore = homeScore;
+            if (awayScore !== undefined) match.awayScore = awayScore;
+            if (minute !== undefined) match.minute = minute;
+            if (status !== undefined) match.status = status;
 
             const topic = `\({TOPIC_MATCH}/\){id}`;
             publish(mqttClient, topic, match);
-            publish(mqttClient, TOPIC_SCORES,{
-                type:'score_update',
+            publish(mqttClient, TOPIC_SCORES, {
+                type: 'score_update',
                 matchId: id,
                 homeScore: match.homeScore,
                 awayScore: match.awayScore,
@@ -77,18 +84,19 @@ export function matchRoutes(mqttClient){
             res.json(match)
         },
 
-        publishEvent: (req, res) => {
-            const {id}  = req.params;
-            const {type, team, player, minute, description} = req.body;
+        publishEvent: async (req, res) => {
+            const { id } = req.params;
+            const { type, team, player, minute, description } = req.body;
 
 
-            const match = matches.get(id);
-            if(!match) {
-                return res.status(404).json({error:"match not found"})
+            const match = await matchesRepo.getMatchById(id);
+            if (!match) {
+                return res.status(404).json({ error: "match not found" })
             }
 
             const event = {
-                id: uuidv4().slice(0,8),
+                id: uuidv4().slice(0, 8),
+                match_id: id,
                 type: type || 'goal',
                 team,
                 player: player || 'Unknown',
@@ -99,24 +107,42 @@ export function matchRoutes(mqttClient){
             };
 
             match.events.push(event);
-            if(type === 'goal'){
-                if(team === match.homeTeam) homeScore++;
-                else if(team === match.awayTeam) awayScore++;
+            try {
+                const id = await eventsRepo.postEvent(event)
+                if (type === 'goal') {
+                    if (team === match.homeTeam) homeScore++;
+                    else if (team === match.awayTeam) awayScore++;
+                }
+
+                const topic = `\({TOPIC_MATCH}/\){id}`;
+                publish(mqttClient, topic, match);
+                publish(mqttClient, TOPIC_EVENTS, { type: 'match_event', matchId: id, event });
+
+                res.status(201).json({ match, event })
+
+            } catch (error) {
+                console.log(error)
+                res.status(500).json({ error: "Failed to add event" })
             }
-
-            const topic = `\({TOPIC_MATCH}/\){id}`;
-            publish(mqttClient,topic,match);
-            publish(mqttClient, TOPIC_EVENTS, {type:'match_event',matchId: id, event});
-
-            res.status(201).json({match, event})
-
         },
 
-        getMatches: (req,res) =>{
-            const list = Array.from(matches.values()).sort(
-                (a,b) => new Date(b.createdAt) - new Date(a.createdAt)
-            );
+        getMatches: async (req, res) => {
             res.json(list);
+            try {
+                const matches = await matchesRepo.getAllMatches();
+                if (Array.isArray(matches)) {
+                    const sortedRows = matches.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                    return res.status(200).json({ data: sortedRows })
+                } else {
+                    return res.status(400).json({ error: "Undefined data" })
+                }
+
+
+            } catch (error) {
+                console.log(error)
+                return res.status(500).json({ error: "Database Error" })
+
+            }
         }
 
 
