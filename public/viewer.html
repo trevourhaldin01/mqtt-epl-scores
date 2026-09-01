@@ -303,19 +303,19 @@
         <div class="match-card ${m.status === 'live' ? 'live' : ''}" data-id="${m.id}">
           <div class="match-header">
             <div>
-              <div class="league">${m.league}</div>
+              <div class="league">Premier League</div>
                             <div class="match-meta">${m.venue || ''}${m.venue && m.kickoff ? ' • ' : ''}${m.kickoff ? new Date(m.kickoff).toLocaleString() : ''}</div>
             </div>
                         <span class="status-badge ${m.status}">${m.status}</span>
           </div>
           <div class="match-teams">
-            <div class="team home">${m.homeTeam}</div>
+            <div class="team home">${m.home_team_name}</div>
             <div class="score-box">
-              <span class="score">${m.homeScore}</span>
+              <span class="score">${m.home_score}</span>
               <span>-</span>
-              <span class="score">${m.awayScore}</span>
+              <span class="score">${m.away_score}</span>
             </div>
-            <div class="team away">${m.awayTeam}</div>
+            <div class="team away">${m.away_team_name}</div>
           </div>
           ${m.minute ? `<div class="match-meta">${m.minute}'</div>` : ''}
           ${
@@ -359,22 +359,22 @@
         matches.set(data.match.id, data.match);
         renderMatches();
       }
-      if (data.id && data.homeTeam && data.awayTeam) {
+      if (data.id && data.home_team_id && data.away_team_id) {
         matches.set(data.id, data);
         renderMatches();
       }
       if (data.type === 'match_created' && data.match) {
-        addFeedItem('match', `New match: ${data.match.homeTeam} vs ${data.match.awayTeam}`);
+        addFeedItem('match', `New match: ${data.match.home_team} vs ${data.match.away_team}`);
       }
       if (data.type === 'score_update') {
         const m = matches.get(data.matchId);
         if (m) {
-          m.homeScore = data.homeScore;
-          m.awayScore = data.awayScore;
+          m.home_score = data.home_score;
+          m.away_score = data.away_score;
           m.minute = data.minute;
           m.status = data.status;
           matches.set(data.matchId, m);
-          addFeedItem('score', `${m.homeTeam} ${data.homeScore}-${data.awayScore} ${m.awayTeam} (${data.minute || '?'})`);
+          addFeedItem('score', `${m.home_team_name} ${data.home_score}-${data.away_score} ${m.away_team_name} (${data.minute || '?'})`);
             renderMatches();
         }
       }
@@ -384,8 +384,8 @@
                 m.events = m.events || [];
                 m.events.push(data.event);
                 if (data.event.type === 'goal') {
-                    if (data.event.team === m.homeTeam) m.homeScore++;
-                    else if (data.event.team === m.awayTeam) m.awayScore++;
+                    if (data.event.team === m.home_team_name) m.home_score++;
+                    else if (data.event.team === m.away_team_name) m.away_score++;
                 }
                 matches.set(data.matchId, m);
                 addFeedItem('event', `${data.event.type}: ${data.event.player} (${data.event.team}) - ${data.event.minute}'`);
@@ -418,7 +418,8 @@
         async function loadInitial() {
             try {
                 const res = await fetch(`${API}/matches`);
-                const list = await res.json();
+                const response = await res.json();
+                const list = response.data || [];
                 list.forEach(m => matches.set(m.id, m));
                 renderMatches();
             } catch (e) {

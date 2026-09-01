@@ -1,12 +1,23 @@
 import { pool } from "../db.js";
 
-export async function getAllMatches(){
-    const [rows] = await pool.query(
-        "SELECT * FROM matches"
-    );
-    console.log("results",rows)
+export async function getAllMatches() {
+  const [rows] = await pool.query(
+    `SELECT
+      m.*,
 
-    return rows
+      h.team_name AS home_team_name,
+
+
+      a.team_name AS away_team_name
+
+
+      FROM matches m 
+      JOIN teams h ON m.home_team_id = h.id 
+      JOIN teams a ON m.away_team_id = a.id
+    `);
+  console.log("results", rows)
+
+  return rows
 
 }
 
@@ -21,15 +32,15 @@ export async function getMatchById(id) {
 
 
 export async function postMatch(body) {
-    const result =await pool.query(
-        `INSERT INTO matches 
-        (id, home_team,away_team,home_score,away_score,league,venue,kickoff,status,minute)
-        VALUES(?,?,?,?,?,?,?,?,?,?)`,
-        [body.id,body.homeTeam, body.awayTeam,body.homeScore,body.awayScore,body.league,
-         body.venue,  body.status, body.minute 
-        ]
-    )
-    return result.insertId;
+  const result = await pool.query(
+    `INSERT INTO matches 
+        (id, home_team_id,away_team_id,home_score,away_score,venue,kickoff,status,minute)
+        VALUES(?,?,?,?,?,?,?,?,?)`,
+    [body.id, body.homeTeamId, body.awayTeamId, body.homeScore, body.awayScore,
+    body.venue, body.kickoff, body.status, body.minute
+    ]
+  )
+  return result.insertId;
 }
 
 export async function deleteMatch(id) {
@@ -43,19 +54,32 @@ export async function deleteMatch(id) {
 
 export async function updateMatch(id, score) {
   const [result] = await pool.query(
-    "UPDATE matches SET score = ? WHERE id = ?",
-    [score, id]
+    `UPDATE matches
+   SET
+     home_score = ?,
+     away_score = ?,
+     minute = ?,
+     status = ?
+   WHERE id = ?`,
+    [
+      score.home_score,
+      score.away_score,
+      score.minute,
+      score.status,
+      id
+    ]
   );
+
 
   return result.affectedRows;
 }
 
-export const matchesRepo ={
-    getAllMatches,
-    getMatchById,
-    postMatch,
-    updateMatch,
-    deleteMatch
+export const matchesRepo = {
+  getAllMatches,
+  getMatchById,
+  postMatch,
+  updateMatch,
+  deleteMatch
 }
 
 

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +11,12 @@
   <!-- Alpine.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     :root {
       --bg: #0f1419;
       --surface: #1a2332;
@@ -22,6 +28,7 @@
       --border: #2d3a4d;
       --danger: #ff4757;
     }
+
     body {
       font-family: 'Outfit', sans-serif;
       background: var(--bg);
@@ -29,7 +36,12 @@
       min-height: 100vh;
       padding: 2rem;
     }
-    .container { max-width: 900px; margin: 0 auto; }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
     header {
       display: flex;
       align-items: center;
@@ -38,6 +50,7 @@
       padding-bottom: 1rem;
       border-bottom: 1px solid var(--border);
     }
+
     section {
       background: var(--surface);
       border-radius: 12px;
@@ -45,19 +58,31 @@
       margin-bottom: 1.5rem;
       border: 1px solid var(--border);
     }
+
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 1rem;
     }
-    @media (max-width:600px){ .grid { grid-template-columns: 1fr; } }
+
+    @media (max-width:600px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .form-group {
       display: flex;
       flex-direction: column;
       gap: 0.4rem;
     }
-    .form-group.full { grid-column: 1 / -1; }
-    input, select {
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    input,
+    select {
       padding: 0.65rem 1rem;
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -65,6 +90,7 @@
       color: var(--text);
       font-family: inherit;
     }
+
     button {
       padding: 0.75rem 1.5rem;
       border: none;
@@ -73,21 +99,25 @@
       font-weight: 600;
       cursor: pointer;
     }
+
     .btn-primary {
       background: var(--accent);
       color: var(--bg);
     }
+
     .btn-secondary {
       background: var(--surface-hover);
       color: var(--text);
       border: 1px solid var(--border);
     }
+
     .actions {
       display: flex;
       gap: 0.75rem;
       flex-wrap: wrap;
       margin-top: 1rem;
     }
+
     .badge {
       background: var(--accent);
       color: var(--bg);
@@ -96,23 +126,27 @@
       border-radius: 999px;
       font-weight: 600;
     }
+
     .viewer-link {
       margin-left: auto;
       color: var(--accent);
       text-decoration: none;
       font-weight: 500;
     }
+
     section h2 {
       font-size: 1rem;
       font-weight: 600;
       margin-bottom: 1rem;
       color: var(--text-muted);
     }
+
     label {
       font-size: 0.85rem;
       font-weight: 500;
       color: var(--text-muted);
     }
+
     .toast {
       position: fixed;
       bottom: 2rem;
@@ -127,8 +161,16 @@
       transition: transform 0.3s, opacity 0.3s;
       z-index: 100;
     }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast.error { background: var(--danger); }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.error {
+      background: var(--danger);
+    }
+
     .match-card {
       display: flex;
       align-items: center;
@@ -139,298 +181,382 @@
       margin-bottom: 0.5rem;
       border: 1px solid var(--border);
     }
+
     .match-score {
       font-size: 1.5rem;
       font-weight: 700;
       color: var(--accent);
       margin: 0 1rem;
     }
-    .match-info { flex: 1; }
-    .match-teams { font-weight: 600; font-size: 1rem; }
-    .match-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
-    .match-actions { display: flex; gap: 0.5rem; }
-    .match-actions button { padding: 0.5rem 1rem; font-size: 0.85rem; }
-    .match-list { margin-top: 1rem; }
+
+    .match-info {
+      flex: 1;
+    }
+
+    .match-teams {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .match-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .match-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .match-actions button {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    .match-list {
+      margin-top: 1rem;
+    }
   </style>
 </head>
+
 <body>
-<div class="container" x-data="app()" x-init="init()">
-  <!-- Toast -->
-  <div class="toast" :class="toastClass" x-text="toastMessage" x-show="toastVisible" x-transition.duration.300ms></div>
-
-  <header>
-    <h1>⚽ Football Scores</h1>
-    <span class="badge">Admin</span>
-    <a href="/viewer.html" class="viewer-link">→ Open Viewer</a>
-  </header>
-
-  <!-- Create Match -->
-  <section>
-    <h2>Create New Match</h2>
-    <form @submit.prevent="createMatch">
-      <div class="grid">
-        <div class="form-group">
-          <label for="homeTeam">Home Team</label>
-          <input type="text" id="homeTeam" x-model="newMatch.homeTeam" placeholder="e.g. Manchester United" required>
-        </div>
-        <div class="form-group">
-          <label for="awayTeam">Away Team</label>
-          <input type="text" id="awayTeam" x-model="newMatch.awayTeam" placeholder="e.g. Liverpool" required>
-        </div>
-        <div class="form-group">
-          <label for="league">League</label>
-          <input type="text" id="league" x-model="newMatch.league" placeholder="e.g. Premier League">
-        </div>
-        <div class="form-group">
-          <label for="venue">Venue</label>
-          <input type="text" id="venue" x-model="newMatch.venue" placeholder="e.g. Old Trafford">
-        </div>
-        <div class="form-group full">
-          <label for="kickoff">Kickoff (ISO)</label>
-          <input type="datetime-local" id="kickoff" x-model="newMatch.kickoff">
-        </div>
-      </div>
-      <div class="actions">
-        <button type="submit" class="btn-primary">Create Match</button>
-      </div>
-    </form>
-  </section>
-
-  <!-- Update Score -->
-  <section>
-    <h2>Update Score</h2>
-    <form @submit.prevent="updateScore">
-      <div class="grid">
-        <div class="form-group full">
-          <label for="scoreMatchId">Select Match</label>
-          <select id="scoreMatchId" x-model="scoreForm.matchId" required>
-            <option value="">-- Select match --</option>
-            <template x-for="m in matches" :key="m.id">
-              <option :value="m.id" x-text="`${m.homeTeam} vs ${m.awayTeam}`"></option>
-            </template>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="homeScore">Home Score</label>
-          <input type="number" id="homeScore" x-model="scoreForm.homeScore" min="0">
-        </div>
-        <div class="form-group">
-          <label for="awayScore">Away Score</label>
-          <input type="number" id="awayScore" x-model="scoreForm.awayScore" min="0">
-        </div>
-        <div class="form-group">
-          <label for="minute">Minute</label>
-          <input type="number" id="minute" x-model="scoreForm.minute" min="0" placeholder="e.g. 67">
-        </div>
-        <div class="form-group">
-          <label for="status">Status</label>
-          <select id="status" x-model="scoreForm.status">
-            <option value="scheduled">Scheduled</option>
-            <option value="live">Live</option>
-            <option value="halftime">Halftime</option>
-            <option value="finished">Finished</option>
-          </select>
-        </div>
-      </div>
-      <div class="actions">
-        <button type="submit" class="btn-primary">Update Score</button>
-      </div>
-    </form>
-  </section>
-
-  <!-- Add Event -->
-  <section>
-    <h2>Add Match Event (Goal, Card, etc.)</h2>
-    <form @submit.prevent="addEvent">
-      <div class="grid">
-        <div class="form-group full">
-          <label for="eventMatchId">Select Match</label>
-          <select id="eventMatchId" x-model="eventForm.matchId" required>
-            <option value="">-- Select match --</option>
-            <template x-for="m in matches" :key="m.id">
-              <option :value="m.id" x-text="`${m.homeTeam} vs ${m.awayTeam}`"></option>
-            </template>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="eventType">Event Type</label>
-          <select id="eventType" x-model="eventForm.type">
-            <option value="goal">Goal</option>
-            <option value="yellow_card">Yellow Card</option>
-            <option value="red_card">Red Card</option>
-            <option value="substitution">Substitution</option>
-            <option value="penalty">Penalty</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="eventTeam">Team</label>
-          <input type="text" id="eventTeam" x-model="eventForm.team" placeholder="e.g. Manchester United">
-        </div>
-        <div class="form-group">
-          <label for="eventPlayer">Player</label>
-          <input type="text" id="eventPlayer" x-model="eventForm.player" placeholder="e.g. Marcus Rashford">
-        </div>
-        <div class="form-group">
-          <label for="eventMinute">Minute</label>
-          <input type="number" id="eventMinute" x-model="eventForm.minute" min="0" placeholder="e.g. 23">
-        </div>
-        <div class="form-group full">
-          <label for="eventDesc">Description</label>
-          <input type="text" id="eventDesc" x-model="eventForm.description" placeholder="Optional description">
-        </div>
-      </div>
-      <div class="actions">
-        <button type="submit" class="btn-primary">Add Event</button>
-      </div>
-    </form>
-  </section>
-
-  <!-- Match List -->
-  <section>
-    <h2>Active Matches</h2>
-    <div class="match-list">
-      <template x-if="matches.length === 0">
-        <p style="color: var(--text-muted);">No matches yet. Create one above.</p>
-      </template>
-      <template x-for="m in matches" :key="m.id">
-        <div class="match-card">
-          <div class="match-info">
-            <div class="match-teams" x-text="`${m.homeTeam} vs ${m.awayTeam}`"></div>
-            <div class="match-meta" x-text="`${m.league} • ${m.status} • ${m.minute || 0}'`"></div>
-          </div>
-          <div class="match-score" x-text="`${m.homeScore} - ${m.awayScore}`"></div>
-          <div class="match-actions">
-            <button class="btn-secondary" @click="quickScore(m)">Update</button>
-          </div>
-        </div>
-      </template>
+  <div class="container" x-data="app()" x-init="init()">
+    <!-- Toast -->
+    <div class="toast" :class="toastClass" x-text="toastMessage" x-show="toastVisible" x-transition.duration.300ms>
     </div>
-  </section>
-</div>
 
-<script>
-  function app() {
-    return {
-      // data
-      matches: [],
-      toastMessage: '',
-      toastClass: 'toast',
-      toastVisible: false,
+    <header>
+      <h1>⚽ Football Scores</h1>
+      <span class="badge">Admin</span>
+      <a href="/viewer.html" class="viewer-link">→ Open Viewer</a>
+    </header>
 
-      newMatch: { homeTeam: '', awayTeam: '', league: 'Premier League', venue: 'TBD', kickoff: '' },
-      scoreForm: { matchId: '', homeScore: 0, awayScore: 0, minute: '', status: 'scheduled' },
-      eventForm: { matchId: '', type: 'goal', team: '', player: '', minute: '', description: '' },
+    <!-- Create Match -->
+    <section>
+      <h2>Create New Match</h2>
+      <form @submit.prevent="createMatch">
+        <div class="grid">
+          <div class="form-group">
+            <label for="homeTeam">Home Team</label>
+            <select id="homeTeamId" x-model="newMatch.homeTeamId" required>
+              <option value="">-- Select home team --</option>
+              <template x-for="team in teams" :key="team.id">
+                <option :value="team.id" x-text="team.team_name"></option>
+              </template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="awayTeamId">Away Team</label>
+            <select id="awayTeamId" x-model="newMatch.awayTeamId" required>
+              <option value="">-- Select away team --</option>
+              <template x-for="team in teams" :key="team.id">
+                <option :value="team.id" x-text="team.team_name"></option>
+              </template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="league">League</label>
+            <input type="text" id="league" x-model="newMatch.league" placeholder="e.g. Premier League">
+          </div>
+          <div class="form-group">
+            <label for="venue">Venue</label>
+            <input type="text" id="venue" x-model="newMatch.venue" placeholder="e.g. Old Trafford">
+          </div>
+          <div class="form-group full">
+            <label for="kickoff">Kickoff (ISO)</label>
+            <input type="datetime-local" id="kickoff" x-model="newMatch.kickoff">
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-primary">Create Match</button>
+        </div>
+      </form>
+    </section>
 
-      // helpers
-      showToast(msg, isError = false) {
-        this.toastMessage = msg;
-        this.toastClass = 'toast show' + (isError ? ' error' : '');
-        this.toastVisible = true;
-        clearTimeout(this._toastTimer);
-        this._toastTimer = setTimeout(() => {
-          this.toastVisible = false;
-          this.toastClass = 'toast';
-        }, 3000);
-      },
+    <!-- Update Score -->
+    <section>
+      <h2>Update Score</h2>
+      <form @submit.prevent="updateScore">
+        <div class="grid">
+          <div class="form-group full">
+            <label for="scoreMatchId">Select Match</label>
+            <select id="scoreMatchId" x-model="scoreForm.matchId" required>
+              <option value="">-- Select match --</option>
 
-      async fetchMatches() {
-        try {
-          const res = await fetch('/api/matches');
-          if (!res.ok) throw new Error('Failed to fetch');
-          this.matches = await res.json();
-        } catch (e) {
-          this.showToast('Could not load matches', true);
+              <template x-for="m in matches" :key="m.id">
+                <option :value="m.id" x-text="m.home_team_name + ' vs ' + m.away_team_name"></option>
+              </template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="homeScore">Home Score</label>
+            <input type="number" id="homeScore" x-model="scoreForm.home_score" min="0">
+          </div>
+          <div class="form-group">
+            <label for="awayScore">Away Score</label>
+            <input type="number" id="awayScore" x-model="scoreForm.away_score" min="0">
+          </div>
+          <div class="form-group">
+            <label for="minute">Minute</label>
+            <input type="number" id="minute" x-model="scoreForm.minute" min="0" placeholder="e.g. 67">
+          </div>
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" x-model="scoreForm.status">
+              <option value="scheduled">Scheduled</option>
+              <option value="live">Live</option>
+              <option value="halftime">Halftime</option>
+              <option value="finished">Finished</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-primary">Update Score</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Add Event -->
+    <section>
+      <h2>Add Match Event (Goal, Card, etc.)</h2>
+      <form @submit.prevent="addEvent">
+        <div class="grid">
+          <div class="form-group full">
+            <label for="eventMatchId">Select Match</label>
+            <select id="eventMatchId" x-model="eventForm.matchId" required>
+              <option value="">-- Select match --</option>
+              <template x-for="m in matches" :key="m.id">
+                <option :value="m.id" x-text="`${m.home_team_name} vs ${m.away_team_name}`"></option>
+              </template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="eventType">Event Type</label>
+            <select id="eventType" x-model="eventForm.type">
+              <option value="goal">Goal</option>
+              <option value="yellow_card">Yellow Card</option>
+              <option value="red_card">Red Card</option>
+              <option value="substitution">Substitution</option>
+              <option value="penalty">Penalty</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="eventTeamSelect">Team</label>
+
+            <select id="eventTeamSelect" x-model="eventForm.team">
+              <option value="">-- Select team --</option>
+              <template x-for="t in eventTeams" :key="t.id">
+                <option :value="t.id" x-text="t.name"></option>
+              </template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="eventPlayer">Player</label>
+            <input type="text" id="eventPlayer" x-model="eventForm.player" placeholder="e.g. Marcus Rashford">
+          </div>
+          <div class="form-group">
+            <label for="eventMinute">Minute</label>
+            <input type="number" id="eventMinute" x-model="eventForm.minute" min="0" placeholder="e.g. 23">
+          </div>
+          <div class="form-group full">
+            <label for="eventDesc">Description</label>
+            <input type="text" id="eventDesc" x-model="eventForm.description" placeholder="Optional description">
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn-primary">Add Event</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Match List -->
+    <section>
+      <h2>Active Matches</h2>
+      <div class="match-list">
+
+        <template x-if="matches.length === 0">
+          <p style="color: var(--text-muted);">No matches yet. Create one above.</p>
+        </template>
+        <template x-for="m in matches" :key="m.id">
+          <div class="match-card">
+            <div class="match-info">
+              <div class="match-teams" x-text="`${m.home_team_name} vs ${m.away_team_name}`"></div>
+              <div class="match-meta" x-text="`${m.league} • ${m.status} • ${m.minute || 0}'`"></div>
+            </div>
+            <div class="match-score" x-text="`${m.home_score} - ${m.away_score}`"></div>
+            <div class="match-actions">
+              <button class="btn-secondary" @click="quickScore(m)">Update</button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function app() {
+      return {
+        // data
+        matches: [],
+        teams: [],
+        toastMessage: '',
+        toastClass: 'toast',
+        toastVisible: false,
+
+        newMatch: { homeTeamId: '', awayTeamId: '', league: 'Premier League', venue: 'TBD', kickoff: '' },
+        scoreForm: { matchId: '', home_score: 0, away_score: 0, minute: '', status: 'scheduled' },
+        eventForm: { matchId: '', type: 'goal', team: '', player: '', minute: '', description: '' },
+
+        // helpers
+        showToast(msg, isError = false) {
+          this.toastMessage = msg;
+          this.toastClass = 'toast show' + (isError ? ' error' : '');
+          this.toastVisible = true;
+          clearTimeout(this._toastTimer);
+          this._toastTimer = setTimeout(() => {
+            this.toastVisible = false;
+            this.toastClass = 'toast';
+          }, 3000);
+        },
+
+        async fetchMatches() {
+          try {
+            const res = await fetch('/api/matches');
+            if (!res.ok) throw new Error('Failed to fetch');
+            const list = await res.json();
+            this.matches = list.data || [];  // ← If list is the array, this will fail
+          } catch (e) {
+            this.showToast('Could not load matches', true);
+          }
+        },
+
+        async apiCall(url, method, body) {
+          try {
+            const res = await fetch(url, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Request failed');
+            return data;
+          } catch (e) {
+            this.showToast(e.message || 'Network error', true);
+            throw e;
+          }
+        },
+
+        // actions
+        async createMatch() {
+          const { homeTeamId, awayTeamId, league, venue, kickoff } = this.newMatch;
+          if (!homeTeamId || !awayTeamId) return this.showToast('Home and Away teams required', true);
+          if (homeTeamId === awayTeamId) return this.showToast('Home and Away teams must be different', true);
+          const payload = {
+            homeTeamId, awayTeamId,
+            league: league || 'Premier League',
+            venue: venue || 'TBD',
+            kickoff: kickoff ? new Date(kickoff).toISOString() : new Date().toISOString()
+          };
+          try {
+            await this.apiCall('/api/matches', 'POST', payload);
+            this.showToast('Match created!');
+            this.newMatch = { homeTeamId: '', awayTeamId: '', league: 'Premier League', venue: 'TBD', kickoff: '' };
+            await this.fetchMatches();
+          } catch { }
+        },
+
+        async updateScore() {
+          const id = this.scoreForm.matchId;
+          if (!id) return this.showToast('Select a match', true);
+          const payload = {
+            home_score: parseInt(this.scoreForm.home_score, 10) || 0,
+            away_score: parseInt(this.scoreForm.away_score, 10) || 0,
+            minute: this.scoreForm.minute ? parseInt(this.scoreForm.minute, 10) : undefined,
+            status: this.scoreForm.status
+          };
+          try {
+            await this.apiCall(`/api/matches/${id}/score`, 'PATCH', payload);
+            this.showToast('Score updated!');
+            this.scoreForm = { matchId: '', home_score: 0, away_score: 0, minute: '', status: 'scheduled' };
+            await this.fetchMatches();
+          } catch { }
+        },
+
+        async addEvent() {
+          const id = this.eventForm.matchId;
+          if (!id) return this.showToast('Select a match', true);
+          const payload = {
+            type: this.eventForm.type,
+            team: this.eventForm.team || undefined,
+            player: this.eventForm.player || undefined,
+            minute: this.eventForm.minute ? parseInt(this.eventForm.minute, 10) : undefined,
+            description: this.eventForm.description || undefined
+          };
+          try {
+            await this.apiCall(`/api/matches/${id}/events`, 'POST', payload);
+            this.showToast('Event added!');
+            this.eventForm = { matchId: '', type: 'goal', team: '', player: '', minute: '', description: '' };
+            await this.fetchMatches();
+          } catch { }
+        },
+
+        quickScore(match) {
+          this.scoreForm.matchId = match.id;
+          this.scoreForm.home_score = match.home_score;
+          this.scoreForm.away_score = match.away_score;
+          this.scoreForm.minute = match.minute || '';
+          this.scoreForm.status = match.status || 'scheduled';
+          // scroll to update section
+          document.querySelector('section:nth-of-type(2)').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+
+        async fetchTeams() {
+          try {
+            const res = await fetch('/api/teams');
+            if (!res.ok) throw new Error('Failed to fetch teams');
+            const response = await res.json();
+
+            this.teams = response.data;
+          } catch (e) {
+            this.showToast('Could not load teams', true);
+          }
+        },
+
+        get selectedMatch() {
+          return this.matches.find(m => m.id === this.eventForm.matchId);
+        },
+
+        get eventTeams() {
+          if (!this.selectedMatch) return [];
+
+          return [
+            {
+              id: this.selectedMatch.home_team_id,
+              name: this.selectedMatch.home_team_name
+            },
+            {
+              id: this.selectedMatch.away_team_id,
+              name: this.selectedMatch.away_team_name
+            }
+          ];
+        },
+
+
+        async init() {
+          await this.fetchMatches();
+          await this.fetchTeams();
+          console.log({ teams: this.teams, matches: this.matches });
+          // set default datetime-local to now
+          const now = new Date();
+          const offset = now.getTimezoneOffset();
+          const local = new Date(now - offset * 60000);
+          this.newMatch.kickoff = local.toISOString().slice(0, 16);
         }
-      },
-
-      async apiCall(url, method, body) {
-        try {
-          const res = await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Request failed');
-          return data;
-        } catch (e) {
-          this.showToast(e.message || 'Network error', true);
-          throw e;
-        }
-      },
-
-      // actions
-      async createMatch() {
-        const { homeTeam, awayTeam, league, venue, kickoff } = this.newMatch;
-        if (!homeTeam || !awayTeam) return this.showToast('Home and Away teams required', true);
-        const payload = {
-          homeTeam, awayTeam,
-          league: league || 'Premier League',
-          venue: venue || 'TBD',
-          kickoff: kickoff ? new Date(kickoff).toISOString() : new Date().toISOString()
-        };
-        try {
-          await this.apiCall('/api/matches', 'POST', payload);
-          this.showToast('Match created!');
-          this.newMatch = { homeTeam: '', awayTeam: '', league: 'Premier League', venue: 'TBD', kickoff: '' };
-          await this.fetchMatches();
-        } catch {}
-      },
-
-      async updateScore() {
-        const id = this.scoreForm.matchId;
-        if (!id) return this.showToast('Select a match', true);
-        const payload = {
-          homeScore: parseInt(this.scoreForm.homeScore, 10) || 0,
-          awayScore: parseInt(this.scoreForm.awayScore, 10) || 0,
-          minute: this.scoreForm.minute ? parseInt(this.scoreForm.minute, 10) : undefined,
-          status: this.scoreForm.status
-        };
-        try {
-          await this.apiCall(`/api/matches/${id}/score`, 'PATCH', payload);
-          this.showToast('Score updated!');
-          await this.fetchMatches();
-        } catch {}
-      },
-
-      async addEvent() {
-        const id = this.eventForm.matchId;
-        if (!id) return this.showToast('Select a match', true);
-        const payload = {
-          type: this.eventForm.type,
-          team: this.eventForm.team || undefined,
-          player: this.eventForm.player || undefined,
-          minute: this.eventForm.minute ? parseInt(this.eventForm.minute, 10) : undefined,
-          description: this.eventForm.description || undefined
-        };
-        try {
-          await this.apiCall(`/api/matches/${id}/events`, 'POST', payload);
-          this.showToast('Event added!');
-          this.eventForm = { matchId: '', type: 'goal', team: '', player: '', minute: '', description: '' };
-          await this.fetchMatches();
-        } catch {}
-      },
-
-      quickScore(match) {
-        this.scoreForm.matchId = match.id;
-        this.scoreForm.homeScore = match.homeScore;
-        this.scoreForm.awayScore = match.awayScore;
-        this.scoreForm.minute = match.minute || '';
-        this.scoreForm.status = match.status || 'scheduled';
-        // scroll to update section
-        document.querySelector('section:nth-of-type(2)').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      },
-
-      async init() {
-        await this.fetchMatches();
-        // set default datetime-local to now
-        const now = new Date();
-        const offset = now.getTimezoneOffset();
-        const local = new Date(now - offset * 60000);
-        this.newMatch.kickoff = local.toISOString().slice(0, 16);
       }
     }
-  }
-</script>
+  </script>
 </body>
+
 </html>

@@ -22,20 +22,24 @@ function publish(client, topic, payload, qos = 1) {
 export function matchRoutes(mqttClient) {
     return {
         publishMatch: async (req, res) => {
-            const { homeTeam, awayTeam, league, venue, kickoff } = req.body;
-            if (!homeTeam || !awayTeam) {
-                return res.status(400).json({ error: 'homeTeam and awayTeam are required' });
+            const { homeTeamId, awayTeamId, league, venue, kickoff } = req.body;
+            if (!homeTeamId || !awayTeamId) {
+                return res.status(400).json({ error: 'homeTeamId and awayTeamId are required' });
             }
+
+            const formatMySQLDate = (date = new Date()) => {
+                return date.toISOString().slice(0, 19).replace("T", " ");
+            };
 
             const match = {
                 id: uuidv4(),
-                homeTeam,
-                awayTeam,
+                homeTeamId: Number(homeTeamId),
+                awayTeamId: Number(awayTeamId),
                 homeScore: 0,
                 awayScore: 0,
                 league: league || 'Premier League',
                 venue: venue || 'TBD',
-                kickoff: kickoff || new Date().toISOString(),
+                kickoff: formatMySQLDate(new Date(kickoff || Date.now())),
                 status: 'scheduled',
                 minute: 0,
                 events: [],
@@ -56,32 +60,43 @@ export function matchRoutes(mqttClient) {
             }
         },
 
-        publishScoreUpdate: (req, res) => {
+        publishScoreUpdate: async (req, res) => {
             const { id } = req.params;
-            const { homeScore, awayScore, minute, status } = req.body;
+            const { home_score, away_score, minute, status } = req.body;
 
-            const match = matches.get(id);
+            const match = await matchesRepo.getMatchById(id);
             if (!match) {
                 return res.status(404).json({ error: 'Match not found' })
             }
 
-            if (homeScore !== undefined) match.homeScore = homeScore;
-            if (awayScore !== undefined) match.awayScore = awayScore;
+            if (home_score !== undefined) match.home_score = home_score;
+            if (away_score !== undefined) match.away_score = away_score;
             if (minute !== undefined) match.minute = minute;
             if (status !== undefined) match.status = status;
 
-            const topic = `\({TOPIC_MATCH}/\){id}`;
-            publish(mqttClient, topic, match);
-            publish(mqttClient, TOPIC_SCORES, {
-                type: 'score_update',
-                matchId: id,
-                homeScore: match.homeScore,
-                awayScore: match.awayScore,
-                minute: match.minute,
-                status: match.status
-            });
+            try {
+                await matchesRepo.updateMatch(id, { home_score, away_score, minute, status });
+                const topic = `\({TOPIC_MATCH}/\){id}`;
+                const event = {
+                    type: 'score_update',
+                    matchId: id,
+                    home_score: match.home_score,
+                    away_score: match.away_score,
+                    minute: match.minute,
+                    status: match.status
+                }
+                publish(mqttClient, topic, match);
+                publish(mqttClient, TOPIC_SCORES, event);
 
-            res.json(match)
+                return res.json(match)
+
+
+            } catch (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Failed to update match score' });
+            }
+
+
         },
 
         publishEvent: async (req, res) => {
@@ -106,13 +121,12 @@ export function matchRoutes(mqttClient) {
 
             };
 
-            match.events.push(event);
             try {
                 const id = await eventsRepo.postEvent(event)
-                if (type === 'goal') {
-                    if (team === match.homeTeam) homeScore++;
-                    else if (team === match.awayTeam) awayScore++;
-                }
+                // if (type === 'goal') {
+                //     if (team === match.homeTeam) homeScore++;
+                //     else if (team === match.awayTeam) awayScore++;
+                // }
 
                 const topic = `\({TOPIC_MATCH}/\){id}`;
                 publish(mqttClient, topic, match);
@@ -127,7 +141,6 @@ export function matchRoutes(mqttClient) {
         },
 
         getMatches: async (req, res) => {
-            res.json(list);
             try {
                 const matches = await matchesRepo.getAllMatches();
                 if (Array.isArray(matches)) {
